@@ -1,0 +1,62 @@
+// Apply plugins to the build
+plugins {
+    id("java")
+}
+
+// Variables
+String rootPath = project.rootDir.path
+FileCollection compileDependencies = files(
+        rootPath + "/lib/asm-9.6.jar",
+        rootPath + "/lib/commons-cli-1.6.0.jar",
+        rootPath + "/lib/log4j-1.2-api-2.22.1.jar"
+)
+
+// Define dependencies
+dependencies {
+    implementation(compileDependencies)
+    runtimeOnly(
+            files(rootPath + "/lib/log4j-core-2.22.1.jar", "" + rootPath + "/lib/log4j-api-2.22.1.jar")
+    )
+}
+
+// Mark sources root
+sourceSets {
+    main {
+        java {
+            srcDirs("src")
+        }
+    }
+}
+
+// Clean
+tasks.register("cleanWorkspace") {
+    group = "aic"
+    delete("build/")
+    delete("lib/instrumenter.jar")
+}
+
+// Compile
+tasks.register("instrumenter-compile", JavaCompile) {
+    group = "aic"
+    classpath = compileDependencies
+    destinationDirectory = file("build/")
+    source = file("src/")
+    includes = ["instrumenter/"]
+}
+
+// Jar
+tasks.register("instrumenter-jar", Jar) {
+    group = "aic"
+    dependsOn = ["instrumenter-compile"]
+    archiveFileName = "instrumenter.jar"
+    destinationDirectory = file(rootPath + "/lib")
+    includes = ["instrumenter/**", "resources/**"]
+    from("build/")
+    doFirst {
+        copy {
+            from("resources/")
+            include("*.txt")
+            into("build/resources/")
+        }
+    }
+}
